@@ -160,13 +160,14 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
                 _decode_seqs = tl.prepro.pad_sequences(_decode_seqs)
                 _target_mask = tl.prepro.sequences_get_mask(_target_seqs)
                 ## Uncomment to view the data here
-                for i in range(len(X)):
-                    print(i, [idx2word[id] for id in X[i]])
-                    print(i, [idx2word[id] for id in Y[i]])
-                    print(i, [idx2word[id] for id in _target_seqs[i]])
-                    print(i, [idx2word[id] for id in _decode_seqs[i]])
-                    print(i, _target_mask[i])
-                    print(len(_target_seqs[i]), len(_decode_seqs[i]), len(_target_mask[i]))
+                if debug:
+                    for i in range(len(X)):
+                        print(i, [idx2word[id] for id in X[i]])
+                        print(i, [idx2word[id] for id in Y[i]])
+                        print(i, [idx2word[id] for id in _target_seqs[i]])
+                        print(i, [idx2word[id] for id in _decode_seqs[i]])
+                        print(i, _target_mask[i])
+                        print(len(_target_seqs[i]), len(_decode_seqs[i]), len(_target_mask[i]))
                 _, loss_iter = sess.run([train_op, loss], {encode_seqs: X, decode_seqs: _decode_seqs,
                                 target_seqs: _target_seqs, target_mask: _target_mask})
                 total_loss += loss_iter
