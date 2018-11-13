@@ -7,6 +7,7 @@ References
 http://suriyadeepan.github.io/2016-12-31-practical-seq2seq/
 """
 import time
+import pdb
 
 import click
 import numpy as np
@@ -16,8 +17,6 @@ import tensorlayer as tl
 from tqdm import tqdm
 from sklearn.utils import shuffle
 from tensorlayer.layers import DenseLayer, EmbeddingInputlayer, Seq2Seq, retrieve_seq_length_op2
-
-from data.twitter import data
 
 sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False)
 
@@ -30,7 +29,8 @@ Training model [optional args]
 @click.option('-n', '--num-epochs', default=50, help='Number of epochs for training',)
 @click.option('-lr', '--learning-rate', default=0.001, help='Learning rate to use when training model',)
 @click.option('-inf', '--inference-mode', is_flag=True, help='Flag for INFERENCE mode',)
-def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode):
+@click.option('-deb', '--debug', is_flag=True, help='Flag for setting a pdb trace after the setup')
+def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, debug):
 
     metadata, trainX, trainY, testX, testY, validX, validY = initial_setup(data_corpus)
 
@@ -79,7 +79,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode):
     # Init Session
     tf.reset_default_graph()
     sess = tf.Session(config=sess_config)
-
+        
     # Training Data Placeholders
     encode_seqs = tf.placeholder(dtype=tf.int64, shape=[batch_size, None], name="encode_seqs")
     decode_seqs = tf.placeholder(dtype=tf.int64, shape=[batch_size, None], name="decode_seqs")
@@ -107,7 +107,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode):
     sess.run(tf.global_variables_initializer())
 
     # Load Model
-    tl.files.load_and_assign_npz(sess=sess, name='model.npz', network=net)
+    tl.files.load_and_assign_npz(sess=sess, name=data_corpus+'.model.npz', network=net)
 
     """
     Inference using pre-trained model
@@ -160,17 +160,18 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode):
                 _decode_seqs = tl.prepro.pad_sequences(_decode_seqs)
                 _target_mask = tl.prepro.sequences_get_mask(_target_seqs)
                 ## Uncomment to view the data here
-                # for i in range(len(X)):
-                #     print(i, [idx2word[id] for id in X[i]])
-                #     print(i, [idx2word[id] for id in Y[i]])
-                #     print(i, [idx2word[id] for id in _target_seqs[i]])
-                #     print(i, [idx2word[id] for id in _decode_seqs[i]])
-                #     print(i, _target_mask[i])
-                #     print(len(_target_seqs[i]), len(_decode_seqs[i]), len(_target_mask[i]))
+                for i in range(len(X)):
+                    print(i, [idx2word[id] for id in X[i]])
+                    print(i, [idx2word[id] for id in Y[i]])
+                    print(i, [idx2word[id] for id in _target_seqs[i]])
+                    print(i, [idx2word[id] for id in _decode_seqs[i]])
+                    print(i, _target_mask[i])
+                    print(len(_target_seqs[i]), len(_decode_seqs[i]), len(_target_mask[i]))
                 _, loss_iter = sess.run([train_op, loss], {encode_seqs: X, decode_seqs: _decode_seqs,
                                 target_seqs: _target_seqs, target_mask: _target_mask})
                 total_loss += loss_iter
                 n_iter += 1
+                if debug: pdb.set_trace()
 
             # printing average loss after every epoch
             print('Epoch [{}/{}]: loss {:.4f}'.format(epoch + 1, num_epochs, total_loss / n_iter))
@@ -183,7 +184,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode):
                     print(" >", ' '.join(sentence))
             
             # saving the model
-            tl.files.save_npz(net.all_params, name='model.npz', sess=sess)
+            tl.files.save_npz(net.all_params, name=data_corpus+'.model.npz', sess=sess)
     
     # session cleanup
     sess.close()
@@ -227,6 +228,8 @@ def create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, is_train=Tru
 Initial Setup
 """
 def initial_setup(data_corpus):
+    import_str = 'from data.' + data_corpus + ' import data' 
+    exec(import_str, globals())
     metadata, idx_q, idx_a = data.load_data(PATH='data/{}/'.format(data_corpus))
     (trainX, trainY), (testX, testY), (validX, validY) = data.split_dataset(idx_q, idx_a)
     trainX = tl.prepro.remove_pad_sequences(trainX.tolist())
