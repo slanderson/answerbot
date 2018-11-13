@@ -8,11 +8,11 @@ limit = {
         'maxq' : 20,
         'minq' : 0,
         'maxa' : 20,
-        'mina' : 3
+        'mina' : 1
         }
 
 UNK = 'unk'
-VOCAB_SIZE = 10000
+VOCAB_SIZE = 39000
 
 import random
 import sys
