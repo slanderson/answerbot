@@ -12,7 +12,7 @@ limit = {
         }
 
 UNK = 'unk'
-VOCAB_SIZE = 8000
+VOCAB_SIZE = 10000
 
 import random
 import sys
@@ -74,7 +74,6 @@ def index_(tokenized_sentences, vocab_size):
     index2word = ['_'] + [UNK] + [ x[0] for x in vocab ]
     # word2index
     word2index = dict([(w,i) for i,w in enumerate(index2word)] )
-    pdb.set_trace()
     return index2word, word2index, freq_dist
 
 
