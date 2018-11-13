@@ -1,7 +1,8 @@
 EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz ' # space is included in whitelist
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 
-FILENAME = 'twitter_en.txt'
+FILENAME = 'qajokes.txt'
+JOKE_FILES = ('jokes.csv', 'lightbulbs.csv', 'nosubject.csv', 'qajokes.csv')
 
 limit = {
         'maxq' : 20,
@@ -15,6 +16,7 @@ VOCAB_SIZE = 6000
 
 import random
 import sys
+import csv
 import pdb
 
 import nltk
@@ -97,9 +99,6 @@ def filter_data(sequences):
     print(str(filtered) + '% filtered from original data due to size limits')
 
     return filtered_q, filtered_a
-
-
-
 
 
 '''
@@ -202,6 +201,31 @@ def process_data():
     with open('metadata.pkl', 'wb') as f:
         pickle.dump(metadata, f)
 
+
+def compile_jokes():
+    '''
+    Assembles multiple joke csv files into a single text file of alternating
+    query-response pairs. This format is consistent with the seq2seq chatbot code from the
+    Tensorlayer tutorial and allows more code re-use
+    '''
+    # Display which files are being assembled
+    print('compiling the following files into qajokes.txt:')
+    s = '\t'
+    for i, fn in enumerate(JOKE_FILES):
+        s += fn
+        if i < len(JOKE_FILES) - 1: s += ', ' 
+    print(s)
+
+    # Assemble all the csv's into a text file 
+    with open(FILENAME, 'w') as outfile:
+        for fn in JOKE_FILES:
+            with open(fn, newline='') as csvfile:
+                csvreader = csv.reader(csvfile)
+                for i, row in enumerate(csvreader):
+                    if i == 0: continue
+                    outfile.write('{}\n{}\n'.format(row[0], row[1]))
+
+
 def load_data(PATH=''):
     # read data control dictionaries
     try:
@@ -287,4 +311,12 @@ def decode(sequence, lookup, separator=''): # 0 used for padding, is ignored
 
 
 if __name__ == '__main__':
+    try:
+        with open('qajokes.txt', 'r'):
+            print('qajokes.txt found, using this file as training data')
+            print('\tdelete this file if you want to generate a new training corpus')
+    except: 
+        print('no qajokes.txt found, compiling it now')
+        compile_jokes()
+    pdb.set_trace()
     process_data()
