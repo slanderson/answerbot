@@ -1,3 +1,8 @@
+
+This directory contains code almost verbatim from the example provided by the Tensorlayer
+project illustrating how to use Tensorlayer to implement a seq2seq model.  The original
+can be found [at their tutorial](https://github.com/tensorlayer/seq2seq-chatbot)
+
 # Seq2Seq Chatbot
 
 This is a 200 lines implementation of Twitter/Cornell-Movie Chatbot, please read the following references before you read the code:
