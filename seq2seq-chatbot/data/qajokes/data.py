@@ -170,8 +170,8 @@ def process_data():
 
     # convert list of [lines of text] into list of [list of words ]
     print('\n>> Segment lines into words')
-    qtokenized = [ wordlist.split(' ') for wordlist in qlines ]
-    atokenized = [ wordlist.split(' ') for wordlist in alines ]
+    qtokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in qlines ]
+    atokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in alines ]
     print('\n:: Sample from segmented list of words')
     print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
     print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
@@ -223,7 +223,7 @@ def compile_jokes():
                 csvreader = csv.reader(csvfile)
                 for i, row in enumerate(csvreader):
                     if i == 0: continue
-                    outfile.write('{}\n{}\n'.format(row[0], row[1]))
+                    outfile.write('{}\n{}\n'.format(row[0].strip(), row[1].strip()))
 
 
 def load_data(PATH=''):
