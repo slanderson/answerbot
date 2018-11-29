@@ -112,6 +112,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
 
     # Load Model
     tl.files.load_and_assign_npz(sess=sess, name=data_corpus+'.model.npz', network=net)
+    print("Loading " + data_corpus + " trained network")
 
     """
     Inference using pre-trained model
@@ -126,7 +127,8 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
         o, state = sess.run([y, net_rnn.final_state_decode],
                         {net_rnn.initial_state_decode: state,
                         decode_seqs2: [[start_id]]})
-        w_id = tl.nlp.sample_top(o[0], top_k=3)
+        o = o[0][2:]   # cut out '_' and 'unk'
+        w_id = tl.nlp.sample_top(o, top_k=3) + 2 # add 2 to account for removed '_' and 'unk'
         w = idx2word[w_id]
         # Decode and feed state iteratively
         sentence = [w]
@@ -134,7 +136,8 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
             o, state = sess.run([y, net_rnn.final_state_decode],
                             {net_rnn.initial_state_decode: state,
                             decode_seqs2: [[w_id]]})
-            w_id = tl.nlp.sample_top(o[0], top_k=2)
+            o = o[0][2:]   # cut out '_' and 'unk'
+            w_id = tl.nlp.sample_top(o, top_k=2) + 2 # add 2 to account for removed '_' and 'unk'
             w = idx2word[w_id]
             if w_id == end_id:
                 break
