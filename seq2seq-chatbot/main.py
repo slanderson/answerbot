@@ -31,10 +31,11 @@ Training model [optional args]
 @click.option('-lr', '--learning-rate', default=0.001, help='Learning rate to use when training model',)
 @click.option('-inf', '--inference-mode', is_flag=True, help='Flag for INFERENCE mode',)
 @click.option('-deb', '--debug', is_flag=True, help='Flag for setting a pdb trace after the setup')
+@click.option('-lf', '--loss-filename', default='losses.txt', help='training/validation loss output filename')
 @click.option('-bl', '--baseline', is_flag=True, help='Flag for running a baseline test')
 @click.option('-o', '--oracle', is_flag=True, help='Flag for running an oracle test')
 def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, debug,
-        baseline, oracle):
+          loss_filename, baseline, oracle):
 
     metadata, trainX, trainY, testX, testY, validX, validY = initial_setup(data_corpus)
 
@@ -154,11 +155,14 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     else:
         seeds = ["happy birthday have a nice day",
                  "donald trump won last nights presidential debate according to snap online polls"]
+        with open(loss_filename, 'w') as loss_file:
+            loss_file.write('Training_Loss    Validation_Loss\n')
         for epoch in range(num_epochs):
+            # compute training set loss and do training
             trainX, trainY = shuffle(trainX, trainY, random_state=0)
             total_loss, n_iter = 0, 0
             for X, Y in tqdm(tl.iterate.minibatches(inputs=trainX, targets=trainY, batch_size=batch_size, shuffle=False), 
-                            total=n_step, desc='Epoch[{}/{}]'.format(epoch + 1, num_epochs), leave=False):
+                             total=n_step, desc='Epoch[{}/{}]'.format(epoch + 1, num_epochs), leave=False):
 
                 X = tl.prepro.pad_sequences(X)
                 _target_seqs = tl.prepro.sequences_add_end_id(Y, end_id=end_id)
@@ -166,7 +170,6 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
                 _decode_seqs = tl.prepro.sequences_add_start_id(Y, start_id=start_id, remove_last=False)
                 _decode_seqs = tl.prepro.pad_sequences(_decode_seqs)
                 _target_mask = tl.prepro.sequences_get_mask(_target_seqs)
-                ## Uncomment to view the data here
                 if debug:
                     for i in range(len(X)):
                         print(i, [idx2word[id] for id in X[i]])
@@ -177,12 +180,34 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
                         print(len(_target_seqs[i]), len(_decode_seqs[i]), len(_target_mask[i]))
                 _, loss_iter = sess.run([train_op, loss], {encode_seqs: X, decode_seqs: _decode_seqs,
                                 target_seqs: _target_seqs, target_mask: _target_mask})
+                if debug: pdb.set_trace()
                 total_loss += loss_iter
                 n_iter += 1
-                if debug: pdb.set_trace()
 
-            # printing average loss after every epoch
-            print('Epoch [{}/{}]: loss {:.4f}'.format(epoch + 1, num_epochs, total_loss / n_iter))
+            # printing average training loss after every epoch
+            print('Epoch [{}/{}]: training loss   {:.4f}'.format(epoch + 1, num_epochs, total_loss / n_iter))
+            with open(loss_filename, 'a') as loss_file: loss_file.write('{:.4f}'.format(total_loss / n_iter))
+
+            # compute validation-set loss
+            validX, validY = shuffle(validX, validY, random_state=0)
+            total_loss, n_iter = 0, 0
+            for X, Y in tqdm(tl.iterate.minibatches(inputs=validX, targets=validY, batch_size=batch_size, shuffle=False), 
+                            total=n_step, desc='  validation set loss computation'.format(epoch + 1, num_epochs), leave=False):
+
+                X = tl.prepro.pad_sequences(X)
+                _target_seqs = tl.prepro.sequences_add_end_id(Y, end_id=end_id)
+                _target_seqs = tl.prepro.pad_sequences(_target_seqs)
+                _decode_seqs = tl.prepro.sequences_add_start_id(Y, start_id=start_id, remove_last=False)
+                _decode_seqs = tl.prepro.pad_sequences(_decode_seqs)
+                _target_mask = tl.prepro.sequences_get_mask(_target_seqs)
+                loss_iter = sess.run(loss, {encode_seqs: X, decode_seqs: _decode_seqs,
+                                target_seqs: _target_seqs, target_mask: _target_mask})
+                total_loss += loss_iter
+                n_iter += 1
+
+            # printing average validation loss after every epoch
+            print('              ' + ' '*(epoch >= 9) +'validation loss {:.4f}'.format(total_loss / n_iter))
+            with open(loss_filename, 'a') as loss_file: loss_file.write(' '*11 + '{:.4f}\n'.format(total_loss / n_iter))
             
             # inference after every epoch
             for seed in seeds:
@@ -236,9 +261,12 @@ def create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, is_train=Tru
 Initial Setup
 """
 def initial_setup(data_corpus):
+    # import the data corpus (questions, answers, and metadata such as the vocab dict)
     import_str = 'from data.' + data_corpus + ' import data' 
     exec(import_str, globals())
     metadata, idx_q, idx_a = data.load_data(PATH='data/{}/'.format(data_corpus))
+
+    # first 70% of dataset is training, second 15% is test, last 15% is validation
     (trainX, trainY), (testX, testY), (validX, validY) = data.split_dataset(idx_q, idx_a)
     trainX = remove_pad_sequences(trainX.tolist())
     trainY = remove_pad_sequences(trainY.tolist())
