@@ -32,10 +32,11 @@ Training model [optional args]
 @click.option('-inf', '--inference-mode', is_flag=True, help='Flag for INFERENCE mode',)
 @click.option('-deb', '--debug', is_flag=True, help='Flag for setting a pdb trace after the setup')
 @click.option('-lf', '--loss-filename', default='losses.txt', help='training/validation loss output filename')
+@click.option('-t', '--test-loss', is_flag=True, help="Flag for evaluating a model's test loss")
 @click.option('-bl', '--baseline', is_flag=True, help='Flag for running a baseline test')
 @click.option('-o', '--oracle', is_flag=True, help='Flag for running an oracle test')
 def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, debug,
-          loss_filename, baseline, oracle):
+          loss_filename, test_loss, baseline, oracle):
 
     metadata, trainX, trainY, testX, testY, validX, validY = initial_setup(data_corpus)
 
@@ -152,6 +153,25 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
             input_seq = input('Enter Query: ')
             sentence = inference(input_seq)
             print(" >", ' '.join(sentence))
+    elif test_loss:  # evaluate and print the test loss
+        testX, testY = shuffle(testX, testY, random_state=0)
+        total_loss, n_iter = 0, 0
+        for X, Y in tqdm(tl.iterate.minibatches(inputs=testX, targets=testY, batch_size=batch_size, shuffle=False), 
+                        total=n_step, desc='test set loss computation', leave=False):
+
+            X = tl.prepro.pad_sequences(X)
+            _target_seqs = tl.prepro.sequences_add_end_id(Y, end_id=end_id)
+            _target_seqs = tl.prepro.pad_sequences(_target_seqs)
+            _decode_seqs = tl.prepro.sequences_add_start_id(Y, start_id=start_id, remove_last=False)
+            _decode_seqs = tl.prepro.pad_sequences(_decode_seqs)
+            _target_mask = tl.prepro.sequences_get_mask(_target_seqs)
+            loss_iter = sess.run(loss, {encode_seqs: X, decode_seqs: _decode_seqs,
+                            target_seqs: _target_seqs, target_mask: _target_mask})
+            total_loss += loss_iter
+            n_iter += 1
+
+        # printing test loss
+        print('test loss {:.4f}'.format(total_loss / n_iter))
     else:
         seeds = ["happy birthday have a nice day",
                  "donald trump won last nights presidential debate according to snap online polls"]
@@ -192,7 +212,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
             validX, validY = shuffle(validX, validY, random_state=0)
             total_loss, n_iter = 0, 0
             for X, Y in tqdm(tl.iterate.minibatches(inputs=validX, targets=validY, batch_size=batch_size, shuffle=False), 
-                            total=n_step, desc='  validation set loss computation'.format(epoch + 1, num_epochs), leave=False):
+                            total=n_step, desc='  validation set loss computation', leave=False):
 
                 X = tl.prepro.pad_sequences(X)
                 _target_seqs = tl.prepro.sequences_add_end_id(Y, end_id=end_id)
