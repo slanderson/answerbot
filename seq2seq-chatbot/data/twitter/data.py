@@ -1,7 +1,7 @@
 EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz ' # space is included in whitelist
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 
-FILENAME = 'data/chat.txt'
+FILENAME = 'twitter_en.txt'
 
 limit = {
         'maxq' : 20,
@@ -93,7 +93,7 @@ def filter_data(sequences):
     # print the fraction of the original data, filtered
     filt_data_len = len(filtered_q)
     filtered = int((raw_data_len - filt_data_len)*100/raw_data_len)
-    print(str(filtered) + '% filtered from original data')
+    print(str(filtered) + '% filtered from original data due to size limits')
 
     return filtered_q, filtered_a
 
