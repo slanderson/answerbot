@@ -50,6 +50,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     n_step = src_len // batch_size
     src_vocab_size = len(metadata['idx2w']) # 8002 (0~8001)
     emb_dim = min(1024, src_vocab_size)
+    hidden_size = 1024
 
     word2idx = metadata['w2idx']   # dict  word 2 index
     idx2word = metadata['idx2w']   # list index 2 word
@@ -93,14 +94,16 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     target_seqs = tf.placeholder(dtype=tf.int64, shape=[batch_size, None], name="target_seqs")
     target_mask = tf.placeholder(dtype=tf.int64, shape=[batch_size, None], name="target_mask") 
 
-    net_out, _ = create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, is_train=True, reuse=False)
+    net_out, _ = create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim,
+                              hidden_size,  is_train=True, reuse=False)
     net_out.print_params(False)
 
     # Inference Data Placeholders
     encode_seqs2 = tf.placeholder(dtype=tf.int64, shape=[1, None], name="encode_seqs")
     decode_seqs2 = tf.placeholder(dtype=tf.int64, shape=[1, None], name="decode_seqs")
 
-    net, net_rnn = create_model(encode_seqs2, decode_seqs2, src_vocab_size, emb_dim, is_train=False, reuse=True)
+    net, net_rnn = create_model(encode_seqs2, decode_seqs2, src_vocab_size, emb_dim,
+                                hidden_size, is_train=False, reuse=True)
     y = tf.nn.softmax(net.outputs)
 
     # Loss Function
@@ -248,7 +251,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
 """
 Creates the LSTM Model
 """
-def create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, is_train=True, reuse=False):
+def create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, hidden_size, is_train=True, reuse=False):
     with tf.variable_scope("model", reuse=reuse):
         # for chatbot, you can use the same embedding layer,
         # for translation, you may want to use 2 seperated embedding layers
@@ -267,7 +270,7 @@ def create_model(encode_seqs, decode_seqs, src_vocab_size, emb_dim, is_train=Tru
             
         net_rnn = Seq2Seq(net_encode, net_decode,
                 cell_fn = tf.nn.rnn_cell.LSTMCell,
-                n_hidden = emb_dim,
+                n_hidden = hidden_size,
                 initializer = tf.random_uniform_initializer(-0.1, 0.1),
                 encode_sequence_length = retrieve_seq_length_op2(encode_seqs),
                 decode_sequence_length = retrieve_seq_length_op2(decode_seqs),
