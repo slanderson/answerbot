@@ -26,7 +26,7 @@ sess_config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=Fal
 Training model [optional args]
 """
 @click.command()
-@click.option('-dc', '--data-corpus', default='twitter', help='Data corpus to use for training and inference',)
+@click.option('-dc', '--data-corpus', default='qajokes', help='Data corpus to use for training and inference',)
 @click.option('-bs', '--batch-size', default=32, help='Batch size for training on minibatches',)
 @click.option('-n', '--num-epochs', default=50, help='Number of epochs for training',)
 @click.option('-lr', '--learning-rate', default=0.001, help='Learning rate to use when training model',)
