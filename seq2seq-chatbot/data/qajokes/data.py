@@ -4,12 +4,6 @@ EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 FILENAME = 'qajokes.txt'
 JOKE_FILES = ('jokes.csv', 'lightbulbs.csv', 'nosubject.csv', 'qajokes.csv')
 
-limit = {
-        'maxq' : 20,
-        'minq' : 0,
-        'maxa' : 20,
-        'mina' : 1
-        }
 
 UNK = 'unk'
 VOCAB_SIZE = 44000
@@ -17,15 +11,14 @@ VOCAB_SIZE = 44000
 import random
 import sys
 import csv
-import pdb
-
-import nltk
 import itertools
 from collections import defaultdict
-
-import numpy as np
-
 import pickle
+import pdb
+
+import click
+import nltk
+import numpy as np
 
 
 def ddefault():
@@ -74,7 +67,6 @@ def index_(tokenized_sentences, vocab_size):
     index2word = ['_'] + [UNK] + [ x[0] for x in vocab ]
     # word2index
     word2index = dict([(w,i) for i,w in enumerate(index2word)] )
-    # pdb.set_trace()
     return index2word, word2index, freq_dist
 
 
@@ -83,7 +75,7 @@ def index_(tokenized_sentences, vocab_size):
     return tuple( filtered_ta, filtered_en )
 
 '''
-def filter_data(sequences):
+def filter_data(sequences, limit):
     filtered_q, filtered_a = [], []
     raw_data_len = len(sequences)//2
 
@@ -109,7 +101,7 @@ def filter_data(sequences):
       return ( [array_en([indices]), array_ta([indices]) )
 
 '''
-def zero_pad(qtokenized, atokenized, w2idx):
+def zero_pad(qtokenized, atokenized, w2idx, limit):
     # num of rows
     data_len = len(qtokenized)
 
@@ -147,6 +139,13 @@ def pad_seq(seq, lookup, maxlen):
 
 def process_data():
 
+    limit = {
+            'maxq' : 20,
+            'minq' : 0,
+            'maxa' : 20,
+            'mina' : 1
+            }
+
     print('\n>> Read lines from file')
     lines = read_lines(filename=FILENAME)
 
@@ -163,7 +162,7 @@ def process_data():
 
     # filter out too long or too short sequences
     print('\n>> 2nd layer of filtering')
-    qlines, alines = filter_data(lines)
+    qlines, alines = filter_data(lines, limit)
     print('\nq : {0} ; a : {1}'.format(qlines[60], alines[60]))
     print('\nq : {0} ; a : {1}'.format(qlines[61], alines[61]))
 
@@ -172,22 +171,43 @@ def process_data():
     print('\n>> Segment lines into words')
     qtokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in qlines ]
     atokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in alines ]
-    print('\n:: Sample from segmented list of words')
+    index_and_save(qtokenized, atokenized, '.', VOCAB_SIZE, limit)
+
+    print('\n>> Segment lines into characters')
+    limit = {
+            'maxq' : 200,
+            'minq' : 0,
+            'maxa' : 200,
+            'mina' : 1
+            }
+    qtokenized = [ [x for x in sentence] for sentence in qlines ]
+    atokenized = [ [x for x in sentence] for sentence in alines ]
+    # TODO: also build a model where all characters are allowed (no whitelist)
+    index_and_save(qtokenized, atokenized, 'char', len(EN_WHITELIST), limit)
+    
+
+
+def index_and_save(qtokenized, atokenized, path, vocab_size, limit):
+    """ 
+    Given lists of tokenized sequences of questions and answers, assembles vocab indices
+    and indexed sequences and saves the data into objects that are ready for the training
+    and inference scripts to use
+    """
     print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
     print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
 
 
     # indexing -> idx2w, w2idx : en/ta
     print('\n >> Index words')
-    idx2w, w2idx, freq_dist = index_( qtokenized + atokenized, vocab_size=VOCAB_SIZE)
+    idx2w, w2idx, freq_dist = index_( qtokenized + atokenized, vocab_size)
 
     print('\n >> Zero Padding')
-    idx_q, idx_a = zero_pad(qtokenized, atokenized, w2idx)
+    idx_q, idx_a = zero_pad(qtokenized, atokenized, w2idx, limit)
 
     print('\n >> Save numpy arrays to disk')
     # save them
-    np.save('idx_q.npy', idx_q)
-    np.save('idx_a.npy', idx_a)
+    np.save(path+'/idx_q.npy', idx_q)
+    np.save(path+'/idx_a.npy', idx_a)
 
     # let us now save the necessary dictionaries
     metadata = {
@@ -198,7 +218,7 @@ def process_data():
                 }
 
     # write to disk : data control dictionaries
-    with open('metadata.pkl', 'wb') as f:
+    with open(path+'/metadata.pkl', 'wb') as f:
         pickle.dump(metadata, f)
 
 

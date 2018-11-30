@@ -285,7 +285,7 @@ Initial Setup
 """
 def initial_setup(data_corpus):
     # import the data corpus (questions, answers, and metadata such as the vocab dict)
-    import_str = 'from data.' + data_corpus + ' import data' 
+    import_str = 'from data.' + data_corpus.split('/')[0] + ' import data' 
     exec(import_str, globals())
     metadata, idx_q, idx_a = data.load_data(PATH='data/{}/'.format(data_corpus))
 
