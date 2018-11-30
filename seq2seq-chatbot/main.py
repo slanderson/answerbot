@@ -11,8 +11,7 @@ import copy
 import pdb
 
 import click
-from prompt_toolkit import PromptSession 
-from prompt_toolkit.history import FileHistory
+import readline
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -151,9 +150,8 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     if inference_mode:
         print('Inference Mode')
         print('--------------')
-        session = PromptSession(history=FileHistory('.history'))
         while True:
-            input_seq = session.prompt('Enter Query: ')
+            input_seq = input('Enter Query: ')
             sentence = inference(input_seq)
             print(" >", ' '.join(sentence))
 
