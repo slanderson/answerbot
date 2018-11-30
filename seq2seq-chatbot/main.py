@@ -49,7 +49,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
 
     n_step = src_len // batch_size
     src_vocab_size = len(metadata['idx2w']) # 8002 (0~8001)
-    emb_dim = 1024
+    emb_dim = min(1024, src_vocab_size)
 
     word2idx = metadata['w2idx']   # dict  word 2 index
     idx2word = metadata['idx2w']   # list index 2 word

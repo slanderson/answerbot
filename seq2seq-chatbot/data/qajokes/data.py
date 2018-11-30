@@ -14,6 +14,7 @@ import csv
 import itertools
 from collections import defaultdict
 import pickle
+import copy
 import pdb
 
 import click
@@ -156,13 +157,15 @@ def process_data():
     print(lines[121:125])
 
     # filter out unnecessary characters
-    print('\n>> Filter lines')
+    print('\n>> Filter out non-alphanumeric characters from lines')
+    full_lines = [ filter_line(line, EN_WHITELIST + EN_BLACKLIST) for line in lines ]
     lines = [ filter_line(line, EN_WHITELIST) for line in lines ]
     print(lines[121:125])
 
     # filter out too long or too short sequences
     print('\n>> 2nd layer of filtering')
     qlines, alines = filter_data(lines, limit)
+    qlines_full, alines_full = filter_data(full_lines, limit)
     print('\nq : {0} ; a : {1}'.format(qlines[60], alines[60]))
     print('\nq : {0} ; a : {1}'.format(qlines[61], alines[61]))
 
@@ -182,8 +185,12 @@ def process_data():
             }
     qtokenized = [ [x for x in sentence] for sentence in qlines ]
     atokenized = [ [x for x in sentence] for sentence in alines ]
+    qtokenized_full = [ [x for x in sentence] for sentence in qlines_full ]
+    atokenized_full = [ [x for x in sentence] for sentence in alines_full ]
     # TODO: also build a model where all characters are allowed (no whitelist)
     index_and_save(qtokenized, atokenized, 'char', len(EN_WHITELIST), limit)
+    index_and_save(qtokenized_full, atokenized_full, 'char_all', len(EN_WHITELIST +
+                    EN_BLACKLIST), limit)
     
 
 
