@@ -11,6 +11,8 @@ import copy
 import pdb
 
 import click
+from prompt_toolkit import PromptSession 
+from prompt_toolkit.history import FileHistory
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -149,10 +151,12 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     if inference_mode:
         print('Inference Mode')
         print('--------------')
+        session = PromptSession(history=FileHistory('.history'))
         while True:
-            input_seq = input('Enter Query: ')
+            input_seq = session.prompt('Enter Query: ')
             sentence = inference(input_seq)
             print(" >", ' '.join(sentence))
+
     elif test_loss:  # evaluate and print the test loss
         testX, testY = shuffle(testX, testY, random_state=0)
         total_loss, n_iter = 0, 0
@@ -172,6 +176,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
 
         # printing test loss
         print('test loss {:.4f}'.format(total_loss / n_iter))
+
     else:
         seeds = ["happy birthday have a nice day",
                  "donald trump won last nights presidential debate according to snap online polls"]
