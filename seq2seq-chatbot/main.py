@@ -8,10 +8,11 @@ http://suriyadeepan.github.io/2016-12-31-practical-seq2seq/
 """
 import time
 import copy
+import math
+import readline
 import pdb
 
 import click
-import readline
 import numpy as np
 import tensorflow as tf
 import tensorlayer as tl
@@ -36,8 +37,9 @@ Training model [optional args]
 @click.option('-t', '--test-loss', is_flag=True, help="Flag for evaluating a model's test loss")
 @click.option('-bl', '--baseline', is_flag=True, help='Flag for running a baseline test')
 @click.option('-o', '--oracle', is_flag=True, help='Flag for running an oracle test')
+@click.option('-rev', '--reverse', is_flag=True, help='Flag for reversing input sequence')
 def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, debug,
-          loss_filename, test_loss, baseline, oracle):
+          loss_filename, test_loss, baseline, oracle, reverse):
 
     metadata, trainX, trainY, testX, testY, validX, validY = initial_setup(data_corpus)
 
@@ -49,7 +51,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
 
     n_step = src_len // batch_size
     src_vocab_size = len(metadata['idx2w']) # 8002 (0~8001)
-    emb_dim = min(1024, src_vocab_size)
+    emb_dim = min(src_vocab_size, 1024)
     hidden_size = 1024
 
     word2idx = metadata['w2idx']   # dict  word 2 index
@@ -125,6 +127,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
     """
     def inference(seed):
         seed_id = [word2idx.get(w, unk_id) for w in seed.split(" ")]
+        if reverse: seed_id.reverse()
         
         # Encode and get state
         state = sess.run(net_rnn.final_state_encode,
@@ -190,6 +193,7 @@ def train(data_corpus, batch_size, num_epochs, learning_rate, inference_mode, de
             for X, Y in tqdm(tl.iterate.minibatches(inputs=trainX, targets=trainY, batch_size=batch_size, shuffle=False), 
                              total=n_step, desc='Epoch[{}/{}]'.format(epoch + 1, num_epochs), leave=False):
 
+                if reverse: X = [x[::-1] for x in X]
                 X = tl.prepro.pad_sequences(X)
                 _target_seqs = tl.prepro.sequences_add_end_id(Y, end_id=end_id)
                 _target_seqs = tl.prepro.pad_sequences(_target_seqs)
