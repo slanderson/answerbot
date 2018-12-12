@@ -1,7 +1,7 @@
 EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz ' # space is included in whitelist
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 
-FILENAME = 'qajokes.txt'
+FILENAME = 'word2vec/qajokes.txt'
 JOKE_FILES = ('jokes.csv', 'lightbulbs.csv', 'nosubject.csv', 'qajokes.csv')
 
 
@@ -31,7 +31,9 @@ def ddefault():
 
 '''
 def read_lines(filename):
-    return open(filename).read().split('\n')[:-1]
+    #if windows
+    #return open(filename, encoding="utf8").read().split('\n')[:-1]
+    return open(filename,  encoding="utf8").read().split('\n')[:-1]
 
 
 '''
@@ -69,6 +71,9 @@ def index_(tokenized_sentences, vocab_size):
     # word2index
     word2index = dict([(w,i) for i,w in enumerate(index2word)] )
     return index2word, word2index, freq_dist
+
+
+
 
 
 '''
@@ -139,6 +144,7 @@ def pad_seq(seq, lookup, maxlen):
 
 
 def process_data():
+    #set the random seed
 
     limit = {
             'maxq' : 20,
@@ -174,7 +180,34 @@ def process_data():
     print('\n>> Segment lines into words')
     qtokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in qlines ]
     atokenized = [ list(filter(None, wordlist.split(' '))) for wordlist in alines ]
-    index_and_save(qtokenized, atokenized, '.', VOCAB_SIZE, limit)
+    index_and_save(qtokenized, atokenized, '.', VOCAB_SIZE, limit, pretrainedBool = False)
+    
+    #load glove model
+    words = load_pretrained_model('glove.6B.100d.txt')
+    qtokenized_glove = []
+    atokenized_glove = []
+    for i in range(len(qtokenized)):
+        qtokenized_glove.append([word if word in words else UNK for word in qtokenized[i] ])
+    for i in range(len(atokenized)):
+        atokenized_glove.append([word if word in words else UNK for word in atokenized[i] ])
+    index_and_save(qtokenized_glove, atokenized_glove, 'glove', len(EN_WHITELIST +
+                    EN_BLACKLIST), limit, pretrainedBool = True, words = words)
+
+    #load w2vec model
+    words = load_pretrained_model('metadata.txt')
+    qtokenized_glove = []
+    atokenized_glove = []
+    for i in range(len(qtokenized)):
+        qtokenized_glove.append([word if word in words else UNK for word in qtokenized[i] ])
+    for i in range(len(atokenized)):
+        atokenized_glove.append([word if word in words else UNK for word in atokenized[i] ])
+    index_and_save(qtokenized_glove, atokenized_glove, 'w2vec', len(EN_WHITELIST +
+                    EN_BLACKLIST), limit, pretrainedBool = True, words = words)
+
+    print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[62], atokenized[62]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[63], atokenized[63]))
 
     print('\n>> Segment lines into characters')
     limit = {
@@ -187,14 +220,18 @@ def process_data():
     atokenized = [ [x for x in sentence] for sentence in alines ]
     qtokenized_full = [ [x for x in sentence] for sentence in qlines_full ]
     atokenized_full = [ [x for x in sentence] for sentence in alines_full ]
+
+
+    
     # TODO: also build a model where all characters are allowed (no whitelist)
-    index_and_save(qtokenized, atokenized, 'char', len(EN_WHITELIST), limit)
+    index_and_save(qtokenized, atokenized, 'char', len(EN_WHITELIST), limit, pretrainedBool = False)
     index_and_save(qtokenized_full, atokenized_full, 'char_all', len(EN_WHITELIST +
-                    EN_BLACKLIST), limit)
+                    EN_BLACKLIST), limit, pretrainedBool = False)
+
     
 
 
-def index_and_save(qtokenized, atokenized, path, vocab_size, limit):
+def index_and_save(qtokenized, atokenized, path, vocab_size, limit, pretrainedBool, words = None):
     """ 
     Given lists of tokenized sequences of questions and answers, assembles vocab indices
     and indexed sequences and saves the data into objects that are ready for the training
@@ -203,10 +240,24 @@ def index_and_save(qtokenized, atokenized, path, vocab_size, limit):
     print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
     print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
 
+    random.seed(3)
+    toShuffle = list(zip(qtokenized, atokenized))
+    random.shuffle(toShuffle)
+
+    qtokenized, atokenized = zip(*toShuffle)
+
+    print('\nq : {0} ; a : {1}'.format(qtokenized[60], atokenized[60]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[61], atokenized[61]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[62], atokenized[62]))
+    print('\nq : {0} ; a : {1}'.format(qtokenized[63], atokenized[63]))
 
     # indexing -> idx2w, w2idx : en/ta
     print('\n >> Index words')
-    idx2w, w2idx, freq_dist = index_( qtokenized + atokenized, vocab_size)
+    if pretrainedBool == False:
+        idx2w, w2idx, freq_dist = index_( qtokenized + atokenized, vocab_size)
+    else:
+        idx2w = ['_'] + [UNK] + words
+        w2idx = dict([(w,i) for i,w in enumerate(idx2w)])
 
     print('\n >> Zero Padding')
     idx_q, idx_a = zero_pad(qtokenized, atokenized, w2idx, limit)
@@ -216,13 +267,23 @@ def index_and_save(qtokenized, atokenized, path, vocab_size, limit):
     np.save(path+'/idx_q.npy', idx_q)
     np.save(path+'/idx_a.npy', idx_a)
 
+    print('the length of w2idx', len(w2idx))
+
     # let us now save the necessary dictionaries
     metadata = {
             'w2idx' : w2idx,
             'idx2w' : idx2w,
             'limit' : limit,
-            'freq_dist' : freq_dist
                 }
+    # original code but freq_dist isn't used and not possible to calculate for 
+    # pretrained models
+    # metadata = {
+    #     'w2idx' : w2idx,
+    #     'idx2w' : idx2w,
+    #     'limit' : limit,
+    #     'freq_dist' : freq_dist
+    #         }
+
 
     # write to disk : data control dictionaries
     with open(path+'/metadata.pkl', 'wb') as f:
@@ -334,6 +395,20 @@ def rand_batch_gen(x, y, batch_size):
 '''
 def decode(sequence, lookup, separator=''): # 0 used for padding, is ignored
     return separator.join([ lookup[element] for element in sequence if element ])
+
+'''
+words that are part of the glove embedding
+adapted from from https://stackoverflow.com/questions/37793118/load-pretrained-glove-vectors-in-python
+'''
+def load_pretrained_model(gloveFile):
+    vocab_size_lim = 50000
+    print('Loading words from Glove Model')
+    f = open(gloveFile, encoding="utf8")
+    model = {}
+    words = [line.split()[0] for line in f]
+    words = words[:vocab_size_lim]
+    print('finished loading words')
+    return words
 
 
 
