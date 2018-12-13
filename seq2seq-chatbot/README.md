@@ -1,6 +1,5 @@
 
-This directory contains code almost verbatim from the example provided by the Tensorlayer
-project illustrating how to use Tensorlayer to implement a seq2seq model.  The original
+This directory contains code based on the seq2seq tutorial provided in the TensorLayer documentation.  The original
 can be found [at their tutorial](https://github.com/tensorlayer/seq2seq-chatbot)
 
 Th original code was modified and a new data corpus was added. The corpus is  150k question-answer
