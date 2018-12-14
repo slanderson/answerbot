@@ -83,7 +83,9 @@ python main.py -dc qajokes/w2vec =ptr True -inf
 
 Enter Query: why did the chicken cross the road
  > to get to the idiots house knock knock whos there the chicken
+
 Enter Query: how many engineers does it take to change a lightbulb
  > none they dont change anything they just sit in the dark
+ 
 Enter Query: how many lawyers does it take to chage a lightbulb
  > one but the lightbulb has to want to change

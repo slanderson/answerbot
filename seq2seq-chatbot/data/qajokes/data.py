@@ -1,7 +1,7 @@
 EN_WHITELIST = '0123456789abcdefghijklmnopqrstuvwxyz ' # space is included in whitelist
 EN_BLACKLIST = '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~\''
 
-FILENAME = 'word2vec/qajokes.txt'
+FILENAME = 'qajokes.txt'
 JOKE_FILES = ('jokes.csv', 'lightbulbs.csv', 'nosubject.csv', 'qajokes.csv')
 
 
